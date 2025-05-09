@@ -4,6 +4,7 @@ logic in main() using the Portfolio class and functions defined in portfolio.py
 """
 
 import portfolio
+import csv
 
 def main():
     #initialise the list of tradeable stocks and their market prices
@@ -112,19 +113,25 @@ def main():
             while True:
                 #prompt user for ticker of stock to be sold and verify that its in the portfolio
                 sell_ticker = input(">> Enter the ticker of the stock you would like to sell: ").upper()
-                if sell_ticker in port.portfolio:
+                ticker_present = False
+                with open("portfolio.csv", "r") as port_csv:
+                    port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
+                    for row in port_dict:
+                        if row["ticker"] == sell_ticker:
+                            ticker_present = True
+                            break
+                if ticker_present:
                     break
+                #check if user wants to go back to the previous command prompt
+                if (sell_ticker == "BACK"):
+                    go_back = True
+                    print()
+                    break
+                #validate ticker
+                if (sell_ticker.isdigit() == True or len(sell_ticker.split()) != 1):
+                    print(f"\n! Please provide a valid ticker !\n")
                 else:
-                    #check if user wants to go back to the previous command prompt
-                    if (sell_ticker == "BACK"):
-                        go_back = True
-                        print()
-                        break
-                    #validate ticker
-                    if (sell_ticker.isdigit() == True or len(sell_ticker.split()) != 1):
-                        print(f"\n! Please provide a valid ticker !\n")
-                    else:
-                        print(f"\n! You don't own any {sell_ticker} !\n")
+                    print(f"\n! You don't own any {sell_ticker} !\n")
             #go back to the previous command prompt if specified by the user
             if go_back:
                 continue
@@ -143,8 +150,15 @@ def main():
                 if (int(sell_quantity) <= 0):
                     print("\n! Please enter a valid quantity !")
                     continue
-                if (int(sell_quantity) > port.portfolio[sell_ticker]):
-                    print(f"\n! You only have {port.portfolio[sell_ticker]} shares of {sell_ticker} to sell !")
+                #check if portfolio holds adequate stock to sell
+                with open("portfolio.csv", "r") as port_csv:
+                    port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
+                    for row in port_dict:
+                        if row["ticker"] == sell_ticker:
+                            current_quantity = int(row["quantity"])
+                            break
+                if (int(sell_quantity) > current_quantity): 
+                    print(f"\n! You only have {current_quantity} shares of {sell_ticker} to sell !")
                 else:
                     sell_quantity = int(sell_quantity)
                     break
@@ -165,7 +179,12 @@ def main():
             print()
         elif command == "VIEW PORTFOLIO":
             #display the user's portfolio
-            if len(port.portfolio) == 0:
+            temp = []
+            with open("portfolio.csv", "r") as port_csv:
+                port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
+                for row in port_dict:
+                    temp.append(row)
+            if (len(temp)) == 0:
                 print("You have no stocks in your portfolio")
             else:
                 port.view_portfolio(market)
