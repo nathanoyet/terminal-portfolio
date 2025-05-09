@@ -32,8 +32,6 @@ def main():
         else:
             break
 
-
-
     while True:
         #prompt user for the starting cash balance
         cash = input("\n>> Enter starting cash ($): ")
