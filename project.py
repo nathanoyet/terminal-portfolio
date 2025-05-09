@@ -1,3 +1,8 @@
+"""
+This is the main python file of the project that contains all the application 
+logic in main() using the Portfolio class and functions defined in portfolio.py
+"""
+
 import portfolio
 
 def main():
