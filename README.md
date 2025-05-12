@@ -20,6 +20,9 @@ Only stocks currently held in the user's portfolio can be sold. Stocks are sold 
 prevailing market price at the time of sale. The proceeds of the sale are added to the user's 
 cash balance.
 
+- VIEW PRICE
+Allows a user to view the current price of a particular stock
+
 - VIEW MARKET
 Displays a list of all the stocks and their current market prices.
 

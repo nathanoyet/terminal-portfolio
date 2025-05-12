@@ -1,6 +1,6 @@
 """
-This is the main python file of the project that contains all the application 
-logic in main() using the Portfolio class and functions defined in portfolio.py
+This is the main python file of the project. It contains all the application logic
+in main() that utilises the Portfolio class and functions defined in portfolio.py
 """
 
 import portfolio
@@ -27,30 +27,62 @@ def main():
     print("-" * 80)
     print()
     while True:
-        portfolio_name = input(">> What would you like to name your portfolio: ")
-        if len(portfolio_name.split()) < 1:
-            print("\n! Please enter a valid portfolio name !\n")
-        else:
+        user_status = input(">> Are you a new user [YES|NO]: ").upper()
+        new_user = True
+        if user_status == "YES":
+            portfolio_name = input("\n>> What would you like to name your portfolio? ")
+            if len(portfolio_name.split()) < 1:
+                print("\n! Please enter a valid portfolio name !\n")
+            else:
+                port_file = f"{portfolio_name}" + ".csv"
+                with open(port_file, "w", newline='') as port_csv:
+                    port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
+                break
+        elif user_status == "NO":
+            new_user = False
+            while True:
+                portfolio_name = input("\n>> Please enter your portfolio name: ")
+                if len(portfolio_name.split()) < 1:
+                    print("\n! Please enter a valid portfolio name !\n")
+                else:
+                    port_file = f"{portfolio_name}" + ".csv"
+                    try:
+                        with open(port_file, "r") as port_csv:
+                            break
+                    except FileNotFoundError:
+                        print(f"\n! {portfolio_name} does not exist. Please enter your correct portfolio name !")
             break
+        else:
+            print("\n! Invalid Command - Please Try Again !\n")
 
-    while True:
-        #prompt user for the starting cash balance
-        cash = input("\n>> Enter starting cash ($): ")
-        if (cash.isdigit() == False):
-            print("\n! Invalid Cash Amount Entered - Please Try Again !")
-            continue
-        if float(cash) <= 0:
-            print("\n! Invalid Cash Amount Entered - Please Try Again !")
-            continue
-        if float(cash) > 10000:
-            print("\n! Max starting cash allowed is $10,000 !")
-            continue
-        else:
-            cash = float(cash)
-            break
+    if new_user:
+        while True:
+            #prompt user for the starting cash balance
+            cash = input("\n>> Enter starting cash ($): ")
+            if (cash.isdigit() == False):
+                print("\n! Invalid Cash Amount Entered - Please Try Again !")
+                continue
+            if float(cash) <= 0:
+                print("\n! Invalid Cash Amount Entered - Please Try Again !")
+                continue
+            if float(cash) > 10000:
+                print("\n! Max starting cash allowed is $10,000 !")
+                continue
+            else:
+                cash = float(cash)
+                #store the new user's cash balance in cash.csv
+                with open("cash.csv", "w", newline='') as cash_csv:
+                    cash_dict = csv.DictWriter(cash_csv, fieldnames = ["balance"])
+                    cash_dict.writerow(cash)
+                break
+    else:
+        #store the returning user's cash balance from the cash.csv
+        with open("cash.csv", "r") as cash_csv:
+            cash_dict = csv.DictReader(cash_csv, fieldnames="balance")
+            cash = float(cash_dict["balance"])
 
     #create the portfolio project
-    port = portfolio.Portfolio(cash)
+    port = portfolio.Portfolio(cash, port_file)
 
     #display available stocks
     print("\nBelow is the list of stocks available for trading:\n")
@@ -101,7 +133,7 @@ def main():
             if go_back:
                 continue
             #if the cash balance is sufficient, buy the stock. Print a success message and the cash balance
-            if (port.buy(buy_ticker, buy_quantity, market[buy_ticker])):
+            if (port.buy(buy_ticker, buy_quantity, market[buy_ticker], port_file)):
                 print()
                 print(f"> {buy_quantity} shares of {buy_ticker} successfully purchased for ${(buy_quantity * market[buy_ticker]):.2f} <".center(80, "-"))
                 print()
@@ -114,7 +146,7 @@ def main():
                 #prompt user for ticker of stock to be sold and verify that its in the portfolio
                 sell_ticker = input(">> Enter the ticker of the stock you would like to sell: ").upper()
                 ticker_present = False
-                with open("portfolio.csv", "r") as port_csv:
+                with open(port_file, "r") as port_csv:
                     port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
                     for row in port_dict:
                         if row["ticker"] == sell_ticker:
@@ -151,7 +183,7 @@ def main():
                     print("\n! Please enter a valid quantity !")
                     continue
                 #check if portfolio holds adequate stock to sell
-                with open("portfolio.csv", "r") as port_csv:
+                with open(port_file, "r") as port_csv:
                     port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
                     for row in port_dict:
                         if row["ticker"] == sell_ticker:
@@ -166,11 +198,32 @@ def main():
             if go_back:
                 continue
             #sell the given quantity of the stock. Print a success message and the cash balance
-            port.sell(sell_ticker, sell_quantity, market[sell_ticker])
+            port.sell(sell_ticker, sell_quantity, market[sell_ticker], port_file)
             print()
             print(f"> {sell_quantity} shares of {sell_ticker} successfully sold for ${sell_quantity * market[sell_ticker]:.2f} <".center(80, "-"))
             print()
             print(f"Your cash balance is ${port.get_cash():.2f}\n".center(80))
+        elif command == "VIEW PRICE":
+            go_back = False
+            while True:
+                #prompt user for valid ticker of stock
+                view_ticker = input(">> Enter stock ticker: ").upper()
+                if view_ticker in market:
+                    break
+                else:
+                    #check if user wants to go back to the previous command prompt
+                    if view_ticker == "BACK":
+                        go_back = True
+                        print()
+                        break
+                    print("\n! Please enter a valid ticker !\n")
+            #go back to the previous command prompt if specified by the user
+            if go_back:
+                continue
+            #display the stock ticker's current price
+            print()
+            print(f"> {view_ticker}'s current stock price is ${market[view_ticker]:.2f} <".center(80, "-"))
+            print()
         elif command == "VIEW MARKET":
             #display the stocks available to be traded
             portfolio.view_market(market)
@@ -179,15 +232,15 @@ def main():
             print()
         elif command == "VIEW PORTFOLIO":
             #display the user's portfolio
-            temp = []
-            with open("portfolio.csv", "r") as port_csv:
+            portfolio_quantity = 0
+            with open(port_file, "r") as port_csv:
                 port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
                 for row in port_dict:
-                    temp.append(row)
-            if (len(temp)) == 0:
+                    portfolio_quantity += int(row["quantity"])
+            if portfolio_quantity == 0:
                 print("You have no stocks in your portfolio")
             else:
-                port.view_portfolio(market)
+                port.view_portfolio(market, port_file)
             print()
         elif command == "VIEW TRADES":
             #display the user's trades
@@ -206,6 +259,10 @@ def main():
         elif command == "BACK":
             print("! You are already at the base command prompt !\n")
         elif command == "EXIT":
+            #store the user's cash balance in cash.csv
+            with open("cash.csv", "w") as cash_csv:
+                cash_dict = csv.DictWriter(cash_csv, fieldnames=["balance"])
+                cash_dict.writerow(port.cash)
             #exit the program after printing a goodbye message and the portfolio return
             port.calculate_portfolio_value(market)
             portfolio_return = (((port.portfolio_value + port.get_cash()) - cash) / cash) * 100

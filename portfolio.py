@@ -3,15 +3,13 @@ This python file includes the Portfolio class which is used to create and modify
 This file also contains global functions that are used in project.py
 """
 
-#remember to always close and reopen the csv file when it is being used 
-
 from datetime import datetime
 import time
 import random
 import csv
 
 class Portfolio:
-    def __init__(self, cash):
+    def __init__(self, cash, port_file):
         """This function initialises a 2 dictionaries that will store a portfolio of 
         stocks and all trades made. The starting cash balance provided by the user is
         also stored
@@ -19,10 +17,15 @@ class Portfolio:
         self.trades = {}
         self.cash = cash
         self.portfolio_value = 0
-        with open("portfolio.csv", "w", newline='') as port_csv:     # overwrites all the previous data - fix
-            port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
+        try:
+            with open(port_file, "r") as port_csv:
+                pass
+        except FileNotFoundError:
+            with open(port_file, "w", newline='') as port_csv:
+                port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
+        #do the same thing with trades.csv
 
-    def buy(self, ticker, quantity, price):
+    def buy(self, ticker, quantity, price, port_file):
         """
         This function adds a newly purchased stock to the portfolio or increases its
         quantity if the stock is already in the portfolio
@@ -36,7 +39,7 @@ class Portfolio:
             #check whether the ticker is in the portfolio
             ticker_present = False
             temp = []
-            with open("portfolio.csv", "r") as port_csv:
+            with open(port_file, "r") as port_csv:
                 port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
                 for row in port_dict:
                     if row["ticker"] == ticker:
@@ -46,12 +49,12 @@ class Portfolio:
 
             if ticker_present:
                 #re-open the csv in write mode to overwrite it with the updated quantity
-                with open("portfolio.csv", "w", newline='') as port_csv:
+                with open(port_file, "w", newline='') as port_csv:
                     port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
                     port_dict.writerows(temp)
             else:
                 #re-open the csv in append mode to insert the new ticker and its quantity
-                with open("portfolio.csv", "a") as port_csv:
+                with open(port_file, "a") as port_csv:
                     port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
                     port_dict.writerow({"ticker" : ticker, "quantity" : quantity})
             
@@ -61,7 +64,7 @@ class Portfolio:
             self.trades[timestamp] = [ticker, quantity, buy_amount, "BUY"]
             return True
 
-    def sell(self, ticker, quantity, price):
+    def sell(self, ticker, quantity, price, port_file):
         """
         This function reduces the quantity of a stock when sold, and adds to the 
         cash balance
@@ -72,7 +75,7 @@ class Portfolio:
 
         #clone the csv data and modify the quantity
         temp = []
-        with open("portfolio.csv", "r") as port_csv:
+        with open(port_file, "r") as port_csv:
             port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
             for row in port_dict:
                 if row["ticker"] == ticker:
@@ -80,7 +83,7 @@ class Portfolio:
                 temp.append(row)
 
         #re-open the csv in write mode and overwrite it with the updated quantity
-        with open("portfolio.csv", "w", newline='') as port_csv:
+        with open(port_file, "w", newline='') as port_csv:
             port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
             port_dict.writerows(temp)
 
@@ -89,12 +92,12 @@ class Portfolio:
         
         #delete stock from portfolio csv if its quantity becomes zero
         temp = []
-        with open("portfolio.csv", "r") as port_csv:
+        with open(port_file, "r") as port_csv:
             port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
             for row in port_dict:
                 if row["quantity"] != 0:
                     temp.append(row)
-        with open("portfolio.csv", "w", newline='') as port_csv:
+        with open(port_file, "w", newline='') as port_csv:
             port_dict = csv.DictWriter(port_csv, fieldnames=["ticker", "quantity"])
             port_dict.writerows(temp)
 
@@ -104,36 +107,30 @@ class Portfolio:
         """
         return self.cash
     
-    def calculate_portfolio_value(self, market):
+    def calculate_portfolio_value(self, market, port_file):
         """
         This function calculates the total value of all stocks in the portfolio
         """
         portfolio_value = 0
-        temp = []
-        with open("portfolio.csv", "r") as port_csv:
+        with open(port_file, "r") as port_csv:
             port_dict = csv.DictReader(port_csv, fieldnames=["ticker", "quantity"])
             for row in port_dict:
                 portfolio_value += (market[row["ticker"]]) * int(row["quantity"])
-                temp.append(row)
         self.portfolio_value = portfolio_value
-        
-        # for position in self.portfolio:
-        #     portfolio_value += (self.portfolio[position] * market[position])
-        # self.portfolio_value = portfolio_value
 
-    def display_portfolio_value(self, portfolio_value, market):
+    def display_portfolio_value(self, market, port_file):
         """
         This function prints the portfolio value
         """
-        self.calculate_portfolio_value(market)
+        self.calculate_portfolio_value(market, port_file)
         print()
         print(" " * 18, "-" * 38)
         print(" " * 20, end="")
         print("Portfolio Value", " " * 10, end="")
-        print(f"${portfolio_value:.2f}".rjust(10))
+        print(f"${self.portfolio_value:.2f}".rjust(10))
         print(" " * 18, "-" * 38)
     
-    def view_portfolio(self, market):
+    def view_portfolio(self, market, port_file):
         """
         This function displays the current portfolio
         """
@@ -145,26 +142,18 @@ class Portfolio:
         print("Market Value")
         print(" " * 18, "-" * 38)
 
-        with open("portfolio.csv", "r") as port_csv:
+        with open(port_file, "r") as port_csv:
             port_dict = csv.DictReader(port_csv, fieldnames = ["ticker", "quantity"])
             for row in port_dict:
-                print(" " * 20, end="")
-                print(f"{position_index}. ", end="")
-                print(f"{row["ticker"]}", end="")
-                print(f"{row["quantity"]}".rjust(10), end="")
-                print(" " * 9, end="")
-                print(f"${(market[row["ticker"]] * int(row["quantity"])):.2f}".rjust(10))
-                position_index += 1
-                
-        # for position in self.portfolio:
-        #         print(" " * 20, end="")
-        #         print(f"{position_index}. ", end="")
-        #         print(f"{position}", end="")
-        #         print(f"{self.portfolio[position]}".rjust(10), end="")
-        #         print(" " * 9, end="")
-        #         print(f"${(market[position] * self.portfolio[position]):.2f}".rjust(10))
-        #         position_index += 1
-        self.display_portfolio_value(self.portfolio_value, market)
+                if int(row["quantity"]) > 0:
+                    print(" " * 20, end="")
+                    print(f"{position_index}. ", end="")
+                    print(f"{row["ticker"]}", end="")
+                    print(f"{row["quantity"]}".rjust(10), end="")
+                    print(" " * 9, end="")
+                    print(f"${(market[row["ticker"]] * int(row["quantity"])):.2f}".rjust(10))
+                    position_index += 1
+        self.display_portfolio_value(market, port_file)
 
     def view_trades(self):
         """
@@ -224,23 +213,25 @@ def list_commands(portfolio_name):
     """
     print(f"\nManage your {portfolio_name} portfolio by entering one of the following commands:\n")
     time.sleep(0.05)
-    print("1. BUY               -> Buy a stock at the market price")
+    print("1.  BUY              -> Buy a stock at the market price")
     time.sleep(0.05)
-    print("2. SELL              -> Sell a stock at a given price")
+    print("2.  SELL             -> Sell a stock at a given price")
     time.sleep(0.05)
-    print("3. VIEW MARKET       -> View the current prices of available stocks")
+    print("3.  VIEW PRICE       -> View the current price of a particular stock")
     time.sleep(0.05)
-    print("4. VIEW PORTFOLIO    -> View the stocks in your portfolio")
+    print("4.  VIEW MARKET      -> View the current prices of all available stocks")
     time.sleep(0.05)
-    print("5. VIEW TRADES       -> View your trading history")
+    print("5.  VIEW PORTFOLIO   -> View the stocks in your portfolio")
     time.sleep(0.05)
-    print("6. VIEW CASH         -> View your available cash balance")
+    print("6.  VIEW TRADES      -> View your trading history")
     time.sleep(0.05)
-    print("7: VIEW COMMANDS     -> View the list of available commands")
+    print("7.  VIEW CASH        -> View your available cash balance")
     time.sleep(0.05)
-    print("8. BACK              -> Go back to the previous command prompt")
+    print("8.  VIEW COMMANDS    -> View the list of available commands")
     time.sleep(0.05)
-    print("9. EXIT              -> Exit the program\n")
+    print("9.  BACK             -> Go back to the previous command prompt")
+    time.sleep(0.05)
+    print("10. EXIT             -> Exit the program\n")
 
 
 if __name__ == "__main__":
