@@ -14,16 +14,8 @@ class Portfolio:
         stocks and all trades made. The starting cash balance provided by the user is
         also stored
         """
-        self.trades = {}
         self.cash = cash
         self.portfolio_value = 0
-        try:
-            with open(port_file, "r") as port_csv:
-                pass
-        except FileNotFoundError:
-            with open(port_file, "w", newline='') as port_csv:
-                port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
-        #do the same thing with trades.csv
 
     def buy(self, ticker, quantity, price, port_file):
         """
@@ -58,9 +50,13 @@ class Portfolio:
                     port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
                     port_dict.writerow({"ticker" : ticker, "quantity" : quantity})
             
+            #reduce the cash balance by the order value
             self.cash -= buy_amount
 
-            # replace with the use of a trades csv
+            #record the trade in trades.csv
+            with open("trades.csv", "a") as trades_csv:
+                trades_dict = csv.DictWriter(trades_csv, fieldnames = ["timestamp", "ticker", "action", "quantity", "amount"])
+                trades_dict.writerow({"timestamp":timestamp, "ticker":ticker, "action":"BUY", "quantity":quantity, "amount":buy_amount})
             self.trades[timestamp] = [ticker, quantity, buy_amount, "BUY"]
             return True
 
@@ -87,8 +83,8 @@ class Portfolio:
             port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
             port_dict.writerows(temp)
 
+        #add the proceeds from the sale to the cash balance
         self.cash += sell_amount
-        self.trades[timestamp] = [ticker, quantity, sell_amount, "SELL"]
         
         #delete stock from portfolio csv if its quantity becomes zero
         temp = []
@@ -100,6 +96,11 @@ class Portfolio:
         with open(port_file, "w", newline='') as port_csv:
             port_dict = csv.DictWriter(port_csv, fieldnames=["ticker", "quantity"])
             port_dict.writerows(temp)
+
+        #record the sell in trades.csv
+        with open("trades.csv", "a") as trades_csv:
+            trades_dict = csv.DictWriter(trades_csv, fieldnames = ["timestamp", "ticker", "action", "quantity", "amount"])
+            trades_dict.writerow({"timestamp":timestamp, "ticker":ticker, "action":"SELL", "quantity":quantity, "amount":sell_amount})
 
     def get_cash(self):
         """
@@ -167,13 +168,19 @@ class Portfolio:
         print("Quantity", " " * 4, end="")
         print("Trade Amount")
         print(" " * 2, "-" * 74)
-        for trade in self.trades:   
+        #copy the trades from trades.csv into a list
+        trades = []
+        with open("trades.csv", "r") as trades_csv:
+            trades_dict = csv.DictReader(trades_csv, fieldnames = ["timestamp", "ticker", "action", "quantity", "amount"])
+            for row in trades_dict:
+                trades.append(row)
+        for trade in trades:   
             print(" " * 3, end="")
-            print(f"{trade}", " " * 6, end="")
-            print(f"{self.trades[trade][0]}", " " * 5, end="")
-            print(f"{self.trades[trade][3]}".center(8), end="")
-            print(f"{self.trades[trade][1]}".rjust(10), " " * 8, end="")
-            print(f"${self.trades[trade][2]:.2f}".rjust(10))
+            print(f"{trade["timestamp"]}", " " * 6, end="")
+            print(f"{trade["ticker"]}", " " * 5, end="")
+            print(f"{trade["action"]}".center(8), end="")
+            print(f"{trade["quantity"]}".rjust(10), " " * 8, end="")
+            print(f"${float(trade["amount"]):.2f}".rjust(10))
 
 
 def refresh_prices(market):

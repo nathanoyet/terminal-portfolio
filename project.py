@@ -30,20 +30,25 @@ def main():
         user_status = input(">> Are you a new user [YES|NO]: ").upper()
         new_user = True
         if user_status == "YES":
-            portfolio_name = input("\n>> What would you like to name your portfolio? ")
-            if len(portfolio_name.split()) < 1:
-                print("\n! Please enter a valid portfolio name !\n")
-            else:
-                port_file = f"{portfolio_name}" + ".csv"
-                with open(port_file, "w", newline='') as port_csv:
-                    port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
+            while True:
+                portfolio_name = input("\n>> What would you like to name your portfolio? ")
+                if len(portfolio_name.split()) < 1:
+                    print("\n! Please enter a valid portfolio name !\n")
+                    continue
+                if (portfolio_name.isalpha() == False):
+                    print("\n! Please enter only alphabetical characters with no spaces !")
+                else:
+                    break
+            port_file = f"{portfolio_name}" + ".csv"
+            with open(port_file, "w", newline='') as port_csv:
+                port_dict = csv.DictWriter(port_csv, fieldnames = ["ticker", "quantity"])
                 break
         elif user_status == "NO":
             new_user = False
             while True:
-                portfolio_name = input("\n>> Please enter your portfolio name: ")
+                portfolio_name = input("\n>> Please enter your portfolio name: ").lower()
                 if len(portfolio_name.split()) < 1:
-                    print("\n! Please enter a valid portfolio name !\n")
+                    print("\n! Please enter a valid portfolio name !")
                 else:
                     port_file = f"{portfolio_name}" + ".csv"
                     try:
@@ -71,15 +76,48 @@ def main():
             else:
                 cash = float(cash)
                 #store the new user's cash balance in cash.csv
-                with open("cash.csv", "w", newline='') as cash_csv:
+                with open("cash.csv", "w") as cash_csv:
                     cash_dict = csv.DictWriter(cash_csv, fieldnames = ["balance"])
-                    cash_dict.writerow(cash)
+                    cash_dict.writerow({"balance" : cash})
+                #create a trades.csv file to store trade history
+                with open("trades.csv", "w", newline='') as trades_csv:
+                    pass
                 break
     else:
-        #store the returning user's cash balance from the cash.csv
-        with open("cash.csv", "r") as cash_csv:
-            cash_dict = csv.DictReader(cash_csv, fieldnames="balance")
-            cash = float(cash_dict["balance"])
+        try:
+            #retrieve the returning user's cash balance from the cash.csv
+            with open("cash.csv", "r") as cash_csv:
+                cash_dict = csv.DictReader(cash_csv, fieldnames = ["balance"])
+                for row in cash_dict:
+                    cash = float(row["balance"])
+            #print a welcome back message
+            print()
+            print(f"> Welcome back to your {portfolio_name} portfolio <".center(80, "-"))
+        except FileNotFoundError:
+            #alert the user that their cash balance cannot be found
+            print("\n! Your cash balance cannot be found !")
+            #proceed to prompt them for a starting cash balance
+            while True:
+                cash = input("\n>> Enter starting cash ($): ")
+                if (cash.isdigit() == False):
+                    print("\n! Invalid Cash Amount Entered - Please Try Again !")
+                    continue
+                if float(cash) <= 0:
+                    print("\n! Invalid Cash Amount Entered - Please Try Again !")
+                    continue
+                if float(cash) > 10000:
+                    print("\n! Max starting cash allowed is $10,000 !")
+                    continue
+                else:
+                    cash = float(cash)
+                    #store the new user's cash balance in cash.csv
+                    with open("cash.csv", "w") as cash_csv:
+                        cash_dict = csv.DictWriter(cash_csv, fieldnames = ["balance"])
+                        cash_dict.writerow({"balance" : cash})
+                    break
+            #print a welcome back message
+            print()
+            print(f"> Welcome back to your {portfolio_name} portfolio <".center(80, "-"))
 
     #create the portfolio project
     port = portfolio.Portfolio(cash, port_file)
@@ -244,7 +282,12 @@ def main():
             print()
         elif command == "VIEW TRADES":
             #display the user's trades
-            if len(port.trades) == 0:
+            trades = []
+            with open("trades.csv", "r") as trades_csv:
+                trades_dict = csv.DictReader(trades_csv, fieldnames = ["timestamp", "ticker", "action", "quantity", "amount"])
+                for row in trades_dict:
+                    trades.append(row)
+            if len(trades) == 0:
                 print("You have no trades")
             else:
                 port.view_trades()
@@ -262,9 +305,9 @@ def main():
             #store the user's cash balance in cash.csv
             with open("cash.csv", "w") as cash_csv:
                 cash_dict = csv.DictWriter(cash_csv, fieldnames=["balance"])
-                cash_dict.writerow(port.cash)
+                cash_dict.writerow({"balance" : port.cash})
             #exit the program after printing a goodbye message and the portfolio return
-            port.calculate_portfolio_value(market)
+            port.calculate_portfolio_value(market, port_file)
             portfolio_return = (((port.portfolio_value + port.get_cash()) - cash) / cash) * 100
             print("> Thank you for using the Terminal Portfolio Simulator <".center(80, "-"))
             print()
