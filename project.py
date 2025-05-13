@@ -1,6 +1,8 @@
 """
 This is the main python file of the project. It contains all the application logic
 in main() that utilises the Portfolio class and functions defined in portfolio.py
+
+This is the main file that should be run via "python3 project.py"
 """
 
 import portfolio

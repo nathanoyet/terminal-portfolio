@@ -1,6 +1,6 @@
 """
 This python file includes the Portfolio class which is used to create and modify a user's portfolio
-This file also contains global functions that are used in project.py
+This file also contains global functions that are used in the main file - project.py
 """
 
 from datetime import datetime
