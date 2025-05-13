@@ -57,7 +57,6 @@ class Portfolio:
             with open("trades.csv", "a") as trades_csv:
                 trades_dict = csv.DictWriter(trades_csv, fieldnames = ["timestamp", "ticker", "action", "quantity", "amount"])
                 trades_dict.writerow({"timestamp":timestamp, "ticker":ticker, "action":"BUY", "quantity":quantity, "amount":buy_amount})
-            self.trades[timestamp] = [ticker, quantity, buy_amount, "BUY"]
             return True
 
     def sell(self, ticker, quantity, price, port_file):
