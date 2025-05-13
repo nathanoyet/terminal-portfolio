@@ -40,7 +40,7 @@ Displays the user's current cash balance
 - VIEW COMMANDS
 Displays the list of commands
 
-- VIEW BACK
+- BACK
 Takes the user to the previous command prompt. If the user is at the base command prompt,
 they cannot go back any further. 
 
